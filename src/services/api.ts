@@ -54,7 +54,10 @@ async function readErrorMessage(response: Response): Promise<string> {
   return response.statusText || `HTTP ${response.status}`;
 }
 
+type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
+
 async function postJson(
+  fetchFn: FetchFn,
   url: string,
   headers: Record<string, string>,
   body: string,
@@ -62,7 +65,7 @@ async function postJson(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
   try {
-    return await fetch(url, { method: 'POST', headers, body, signal: controller.signal });
+    return await fetchFn(url, { method: 'POST', headers, body, signal: controller.signal });
   } catch (error) {
     if (controller.signal.aborted) throw new TimeoutError('Upload timed out');
     throw new NetworkError(error instanceof Error ? error.message : 'Network request failed');
@@ -72,7 +75,10 @@ async function postJson(
 }
 
 export class HttpDeliveryApi implements DeliveryApi {
-  constructor(private readonly baseUrl: string | null = API_URL) {}
+  constructor(
+    private readonly baseUrl: string | null = API_URL,
+    private readonly fetchFn: FetchFn = (url, init) => fetch(url, init),
+  ) {}
 
   async uploadDelivery(delivery: Delivery, devSettings?: DevSettings): Promise<UploadResult> {
     if (!this.baseUrl) {
@@ -92,6 +98,7 @@ export class HttpDeliveryApi implements DeliveryApi {
     });
 
     const response = await postJson(
+      this.fetchFn,
       `${this.baseUrl}/deliveries`,
       {
         'Content-Type': 'application/json',

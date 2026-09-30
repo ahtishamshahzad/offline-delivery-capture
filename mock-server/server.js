@@ -81,7 +81,18 @@ function readBody(req) {
   });
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Wait `ms`, but stop early if the client disconnects (timed out / app killed). */
+function holdResponse(res, ms) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    res.once('close', done);
+    function done() {
+      clearTimeout(timer);
+      res.off('close', done);
+      resolve();
+    }
+  });
+}
 
 /** Returns an error string, or null when the payload is valid. */
 function validate(body) {
@@ -116,7 +127,7 @@ function createServer({ dataDir = path.join(__dirname, 'data'), log = console.lo
 
     const failure = req.headers['x-simulate-failure'];
     const delay = Math.min(Number(req.headers['x-simulate-delay-ms']) || 0, MAX_SIMULATED_DELAY_MS);
-    if (delay > 0) await sleep(delay);
+    if (delay > 0) await holdResponse(res, delay);
 
     if (failure === 'server_error') {
       log(`FAIL   ${key} → 503 (simulated, nothing stored)`);
@@ -158,7 +169,7 @@ function createServer({ dataDir = path.join(__dirname, 'data'), log = console.lo
     }
     if (failure === 'timeout') {
       log(`       ${key} → holding ${TIMEOUT_MODE_HOLD_MS} ms (simulated timeout)`);
-      await sleep(TIMEOUT_MODE_HOLD_MS);
+      await holdResponse(res, TIMEOUT_MODE_HOLD_MS);
     }
     if (res.destroyed) return; // client gave up (timeout / app killed)
     return sendJson(res, replayed ? 200 : 201, { remoteId: record.remoteId, replayed });
