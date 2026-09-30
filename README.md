@@ -3,6 +3,17 @@
 A construction foreman receives a material delivery with no signal. They photograph the delivery ticket, enter the supplier, PO number and a note, and save. The record is stored on the device immediately and is uploaded automatically when connectivity returns, without duplicates, even if the app is killed mid-upload.
 
 **Stack:** Expo SDK 57 · React Native 0.86 · TypeScript (strict) · Expo Router · `expo-sqlite` · `@react-native-community/netinfo` · `expo-image-picker` + `expo-image-manipulator` · `expo-file-system` · zero-dependency Node mock API.
+**Platforms:** iOS and Android through Expo Go. Web is not supported.
+
+**Status:** all automated tests pass (42) and the sync, recovery and duplicate scenarios are verified on the iOS Simulator ([record](docs/testing.md#on-simulator-verification)). The hand test on a physical phone (camera, airplane mode) is still open.
+
+## Documentation
+
+| Where | What |
+|---|---|
+| This README | How it works (§1–4), how to run it (§5), how to test it (§6), trade-offs (§7), demo script |
+| [docs/](docs/README.md) | Reference: [mobile app](docs/mobile/README.md) (one page per [screen](docs/mobile/screens/README.md), plus [sync engine](docs/mobile/sync.md), [data model](docs/mobile/state.md), [native](docs/mobile/native.md)), [mock server API](docs/mock-server/api/deliveries.md), [architecture + decision records](docs/architecture/README.md), [testing](docs/testing.md) |
+| [.ai/](.ai/README.md) | Work records: the approved [plan](.ai/projects/current/PLAN.md) and current [project state](.ai/projects/current/STATE.md) |
 
 ---
 
@@ -45,7 +56,12 @@ src/
   types/ utils/   delivery/settings types, uuid, errors, validation, time
 mock-server/      server.js (Node http, no deps) + server.test.js
 __tests__/        sync engine, retry policy, validation, API ↔ server integration
+test-support/     in-memory fakes + node:http fetch adapter for tests
+docs/             product documentation (screens, sync, data model, API, ADRs, testing)
+.ai/              plan and project state
 ```
+
+Why it is built this way: [architecture decision records](docs/architecture/decisions/README.md).
 
 ## 2. Offline strategy
 
@@ -176,6 +192,9 @@ The ⚙︎ **dev settings** screen has:
 - **Upload delay:** 0 / 2 / 8 s
 - **Re-send last synced delivery**
 - the server's delivery count
+- **Reset demo data:** clears local deliveries and photos, turns simulations off and empties the server
+
+Full reference: [docs/mobile/screens/dev-settings.md](docs/mobile/screens/dev-settings.md).
 
 | Scenario | Steps | Expected |
 |---|---|---|
@@ -215,6 +234,8 @@ curl -s -X DELETE localhost:4000/deliveries        # reset
   - 503, malformed response, timeout and missing photo
   - the full "killed mid-upload → recover → replay" path
 - **Mock server:** idempotency, 422 key misuse, 400 validation, simulated failures.
+
+Per-suite breakdown, and the on-simulator record of every scenario above except camera and airplane mode: [docs/testing.md](docs/testing.md).
 
 ## 7. Trade-offs and what I'd do for production
 
