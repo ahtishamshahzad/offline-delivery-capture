@@ -28,7 +28,10 @@ export class SyncEngine {
 
   constructor(private readonly deps: SyncDeps) {}
 
-  /** Call once at app startup. Recovers interrupted uploads, then syncs. */
+  /**
+   * Call once at app startup. Resolves after recovery; the first sync runs in
+   * the background (await `whenIdle()` to wait for it).
+   */
   async start(): Promise<void> {
     if (this.started) return;
     this.started = true;
@@ -47,7 +50,7 @@ export class SyncEngine {
       this.unsubscribers.push(this.deps.subscribeForeground(() => void this.requestSync('foreground')));
     }
 
-    await this.requestSync('startup');
+    void this.requestSync('startup');
   }
 
   stop(): void {
