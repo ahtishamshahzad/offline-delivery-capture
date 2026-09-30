@@ -13,12 +13,15 @@
 | Hand test on a physical phone | ⏳ Open: camera/library, airplane mode, Retry tap, dev-screen buttons |
 | Demo recording | ⏳ Open ([README demo script](../../../README.md#demo-script-90-s)) |
 
+**Definition of done:** 15 / 17 met. The two remaining (photo capture; real offline → online) close with the phone test.
+
 ## Shipped (merged PRs)
 | PR | Content |
 |---|---|
 | #1 | Full prototype: persistence, capture, queue/details UI, API + mock server, sync engine, dev tools, tests, README; plus the Reset demo data button |
 | #2 | `app.json` declares iOS/Android only (fixes `expo export --platform all`) |
-| #3 | This documentation set (`docs/`, `.ai/`) and README updates |
+| #3 | Documentation set (`docs/`, `.ai/`) and README updates |
+| #4 | Save → queue → upload flow explained in code comments and in `docs/mobile/sync.md`; editor fix for `TS17004` (workspace TypeScript via `.vscode/settings.json`, explicit `jsx`, `.claude/` excluded from `tsconfig`) |
 
 ## Deviations from the plan
 Recorded once in [PLAN.md §12a](PLAN.md#12a-implementation-notes-deviations-from-this-plan). The ones that matter:
@@ -28,6 +31,10 @@ Recorded once in [PLAN.md §12a](PLAN.md#12a-implementation-notes-deviations-fro
 - two extra dev dependencies: `react-dom` and `@types/node`
 
 ## Open items
-1. Hand test on a phone, following README §6. If it finds a defect, fix it with a regression test.
-2. Decide the repo's visibility before sharing it with the reviewer (currently private).
-3. Optional housekeeping: remove the merged local worktrees under `.claude/worktrees/`.
+1. **Hand test on a phone**, following README §6. If it finds a defect, fix it with a regression test.
+2. **Record the demo** (README demo script; start with ⚙︎ → Reset demo data).
+3. **Decide the repo's visibility** before sharing it with the reviewer (currently private).
+4. **Editor:** select "TypeScript: Use Workspace Version" (6.0.3) so the JSX error from an older bundled TypeScript goes away.
+
+## Done housekeeping
+- Merged local worktrees (`offline-prototype`, `fix-platforms`, `docs`, `flow-comments`) and their branches removed on 2026-09-30; only `main` remains.
