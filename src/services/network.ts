@@ -19,6 +19,8 @@ export const netInfoMonitor: NetworkMonitor = {
   async isOnline() {
     return isOnlineState(await NetInfo.fetch());
   },
+  // SyncEngine.start() subscribes here; an offline → online change fires
+  // requestSync('reconnect'), which uploads everything still queued.
   subscribe(listener) {
     return NetInfo.addEventListener((state) => listener(isOnlineState(state)));
   },

@@ -29,11 +29,17 @@ export interface DeliveryStore {
 
 const listeners = new Set<Listener>();
 
+/** Every status change calls this; useDeliveries re-reads SQLite, so cards update live. */
 function notify(): void {
   listeners.forEach((listener) => listener());
 }
 
-/** A due row: queued, or failed with an automatic retry whose time has come. */
+/**
+ * "The queue" = rows matching this condition: queued, or failed with an
+ * automatic retry whose time has come. Failed rows with next_attempt_at NULL
+ * (retries used up / permanent error) are excluded until a manual Retry.
+ * The sync engine reads the queue with getDueDeliveries().
+ */
 const DUE_CONDITION = `(status = 'queued' OR (status = 'failed' AND next_attempt_at IS NOT NULL AND next_attempt_at <= $now))`;
 
 export const deliveryRepository = {
@@ -44,7 +50,10 @@ export const deliveryRepository = {
     };
   },
 
-  /** Idempotent on `id`: saving the same draft twice creates one row. Returns true if inserted. */
+  /**
+   * Save step: the delivery ENTERS THE QUEUE as 'queued'. No network involved.
+   * Idempotent on `id`: saving the same draft twice creates one row. Returns true if inserted.
+   */
   async create(input: NewDeliveryInput, now: number): Promise<boolean> {
     const db = await getDb();
     const result = await db.runAsync(
@@ -104,6 +113,11 @@ export const deliveryRepository = {
     return row?.next ?? null;
   },
 
+  /**
+   * The row LEAVES THE QUEUE: queued|due-failed → 'uploading', committed
+   * before the HTTP request so a killed app leaves evidence to recover.
+   * Atomic: only one caller can get changes === 1, so a row is never sent twice.
+   */
   async claimForUpload(id: string, now: number): Promise<boolean> {
     const db = await getDb();
     const result = await db.runAsync(
@@ -116,6 +130,7 @@ export const deliveryRepository = {
     return result.changes === 1;
   },
 
+  /** Upload succeeded: 'uploading' → 'synced'. Out of the queue for good. */
   async markSynced(id: string, remoteId: string, replayed: boolean, now: number): Promise<void> {
     const db = await getDb();
     const result = await db.runAsync(
@@ -131,6 +146,10 @@ export const deliveryRepository = {
     if (result.changes > 0) notify();
   },
 
+  /**
+   * Upload failed: 'uploading' → 'failed'. With a next_attempt_at the row
+   * REJOINS THE QUEUE when that time passes; with NULL it waits for Retry.
+   */
   async markFailed(id: string, update: FailureUpdate, now: number): Promise<void> {
     const db = await getDb();
     const result = await db.runAsync(
@@ -146,6 +165,7 @@ export const deliveryRepository = {
     if (result.changes > 0) notify();
   },
 
+  /** App start: rows left 'uploading' by a killed process go BACK INTO THE QUEUE. */
   async recoverInterrupted(now: number): Promise<number> {
     const db = await getDb();
     const result = await db.runAsync(
@@ -164,6 +184,7 @@ export const deliveryRepository = {
     return result.changes;
   },
 
+  /** Retry button: 'failed' → 'queued' with backoff reset. The row REJOINS THE QUEUE. */
   async resetForManualRetry(id: string, now: number): Promise<boolean> {
     const db = await getDb();
     const result = await db.runAsync(

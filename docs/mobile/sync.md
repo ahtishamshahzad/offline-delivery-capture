@@ -3,6 +3,29 @@
 **Source:** `src/sync/` · **Wired in:** `src/sync/index.ts` · **Reached from the UI only via** `useSyncQueue` and `useCreateDelivery`.
 Concepts and diagrams: root [README §2–4](../../README.md#2-offline-strategy). This page is the reference.
 
+## End-to-end flow: from Save to server
+
+There is **no separate queue structure**. "In the queue" means a `deliveries` row matching `DUE_CONDITION` in `deliveryRepository.ts`: `status = 'queued'`, or `failed` with a `next_attempt_at` that has passed. Only **one** function calls the upload API, `HttpDeliveryApi.uploadDelivery` (`src/services/api.ts`), and only `sync/uploadDelivery.ts` calls it.
+
+| Step | What happens | Code | Status / queue |
+|---|---|---|---|
+| 1 | User presses Save; form validated | `CaptureScreen.onSave` | — |
+| 2 | Photo resized and copied into app storage | `useCreateDelivery` → `persistPhoto` | — |
+| 3 | Row inserted into SQLite | `deliveryRepository.create` | `queued`, **enters the queue**; the card appears via `notify()` |
+| 4 | Engine nudged; Save returns without waiting | `syncEngine.requestSync('created')` | — |
+| 5 | Offline? The run stops quietly | `SyncEngine.runOnce` → `network.isOnline()` | stays `queued` ("Waiting for connection") |
+| 6 | Network returns → NetInfo event → offline→online check | `netInfoMonitor.subscribe` → `SyncEngine.start` listener → `requestSync('reconnect')` | — |
+| 7 | Read the due rows, oldest first | `processDueDeliveries` → `getDueDeliveries` | — |
+| 8 | Atomic claim, committed **before** the request | `uploadDelivery` → `claimForUpload` | `uploading`, **leaves the queue** |
+| 9 | `POST /deliveries` + `Idempotency-Key` (15 s timeout) | `HttpDeliveryApi.uploadDelivery` | — |
+| 10a | Success (201 new / 200 replayed) | `markSynced` | `synced`, **out for good** |
+| 10b | Error → retry decision | `markFailed` + `retryPolicy` | `failed`; rejoins the queue at `next_attempt_at`, or waits for Retry if that's NULL |
+| 11 | The next retry time arrives | `scheduleNextRetry` → `requestSync('backoff-timer')` | due again → back to step 8 |
+| — | App killed during step 9 | next launch: `SyncEngine.start` → `recoverInterrupted` | `uploading` → `queued`, **back in the queue**; re-sent with the same key |
+| — | User taps Retry | `retryDelivery` → `resetForManualRetry` → `requestSync('manual')` | `failed` → `queued`, **back in the queue** |
+
+Every status change calls `notify()`, and `useDeliveries` re-reads SQLite, so the card on screen updates at each step.
+
 ## Triggers (`SyncReason`)
 | Reason | Fired by |
 |---|---|

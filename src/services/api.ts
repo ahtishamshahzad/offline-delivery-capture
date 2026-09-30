@@ -19,7 +19,12 @@ export interface UploadResult {
   replayed: boolean;
 }
 
-/** The sync engine depends only on this interface, never on fetch directly. */
+/**
+ * The sync engine depends only on this interface, never on fetch directly.
+ * To target a different live backend, either point EXPO_PUBLIC_API_URL at a
+ * server with the same contract, or pass another implementation in
+ * src/sync/index.ts.
+ */
 export interface DeliveryApi {
   uploadDelivery(delivery: Delivery, devSettings?: DevSettings): Promise<UploadResult>;
 }
@@ -80,6 +85,13 @@ export class HttpDeliveryApi implements DeliveryApi {
     private readonly fetchFn: FetchFn = (url, init) => fetch(url, init),
   ) {}
 
+  /**
+   * THE upload call. Only reached from sync/uploadDelivery.ts, after the row
+   * was claimed ('uploading'). POST {API_URL}/deliveries with the delivery's
+   * stable Idempotency-Key, so a retry after a kill/timeout is recognised by
+   * the server (replayed: true) instead of creating a duplicate.
+   * Every failure is thrown as a typed error; retryPolicy decides what next.
+   */
   async uploadDelivery(delivery: Delivery, devSettings?: DevSettings): Promise<UploadResult> {
     if (!this.baseUrl) {
       throw new ConfigError('EXPO_PUBLIC_API_URL is not set (see .env.example)');

@@ -11,6 +11,9 @@ type SaveResult = { ok: true } | { ok: false; message: string };
 /**
  * Save flow: copy photo into app storage → insert a `queued` row → nudge sync.
  * Works fully offline; the network is only touched by the sync engine.
+ *
+ * This is where a delivery ENTERS THE QUEUE. What happens next (claim →
+ * upload → synced/failed) is in SyncEngine / uploadDelivery.
  */
 export function useCreateDelivery() {
   const [saving, setSaving] = useState(false);
@@ -25,7 +28,9 @@ export function useCreateDelivery() {
 
     let photoPath: string | null = null;
     try {
+      // 1. Photo: resize/compress and copy out of the picker's temp location.
       photoPath = await persistPhoto(values.photoUri, draftId);
+      // 2. SQLite first: status 'queued'. notify() makes the card appear at once.
       await deliveryRepository.create(
         {
           id: draftId,
@@ -36,6 +41,8 @@ export function useCreateDelivery() {
         },
         now(),
       );
+      // 3. Nudge the engine; it uploads only if online. Not awaited, so saving
+      //    never waits on the network.
       void syncEngine.requestSync('created');
       return { ok: true };
     } catch (error) {
