@@ -30,6 +30,7 @@ export function QueueScreen() {
   const { syncNow, retry } = useSyncQueue();
   const summary = summarize(deliveries);
 
+  // Sync trigger: opening the queue uploads anything still queued (if online).
   useFocusEffect(
     useCallback(() => {
       syncNow('queue-focus');

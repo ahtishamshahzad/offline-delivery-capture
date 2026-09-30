@@ -21,10 +21,13 @@ export async function uploadDelivery(delivery: Delivery, deps: SyncDeps): Promis
   try {
     const devSettings = await deps.getDevSettings?.();
     const result = await deps.api.uploadDelivery(delivery, devSettings);
+    // Out of the queue for good. `replayed` = the server already had this key.
     await deps.store.markSynced(delivery.id, result.remoteId, result.replayed, deps.clock());
     deps.log?.(`synced ${delivery.id}${result.replayed ? ' (replayed)' : ''}`);
     return 'synced';
   } catch (error) {
+    // Back to 'failed'. A next_attempt_at puts it back in the queue later
+    // (2/4/8/16 s); null means it waits for a manual Retry.
     const failedAttempts = delivery.retryCount + 1;
     const nextAttemptAt = shouldAutoRetry(error, failedAttempts)
       ? deps.clock() + nextDelayMs(failedAttempts)
