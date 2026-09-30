@@ -531,6 +531,25 @@ Legend: ⏱ estimate · ✅ acceptance criteria · 🔗 depends on
 
 ---
 
+## 12a. Implementation notes (deviations from this plan)
+
+| Plan | As built | Why |
+|---|---|---|
+| Routes in root `app/` | `src/app/` | The SDK 57 template's convention |
+| `@expo/vector-icons` from the template | Not used; text glyphs (✓ ● ⚙︎) | The SDK 57 template no longer ships it; avoids a dependency |
+| Claim SQL `next_attempt_at IS NULL OR <= now` | `status='queued' OR (status='failed' AND next_attempt_at IS NOT NULL AND next_attempt_at <= now)` | Exhausted failures (null) must wait for manual Retry |
+| `SyncEngine.start()` awaits the first sync | Resolves after recovery; the first sync runs in the background | App launch must not wait up to 15 s on a dead server |
+| — | `react-dom` 19.2.3 and `@types/node` as dev deps | `jest-expo` peer resolution; Node types for the integration tests (TS 6 needs explicit `types`) |
+| — | `HttpDeliveryApi(baseUrl, fetch?)` | The jest-expo preset replaces global fetch; the integration tests inject a `node:http` fetch |
+| Task 1.7 debug button | SQL checked with `node:sqlite`, plus the on-simulator run below | No throwaway UI needed |
+
+**Runtime verification (iOS Simulator, Expo Go 57.0.9, 2026-09-30):**
+- The queue, capture and details screens render.
+- A row seeded as `uploading` plus a server copy of it went: cold start → `recovered 1 interrupted upload(s)` → `synced (replayed)`. The server logged `NEW` then `REPLAY` with the same remoteId.
+- A second, queued row synced as `NEW`.
+
+**Not yet exercised by hand:** camera/library capture, airplane-mode toggling and the dev-screen toggles. These need taps on a device; see README §6.
+
 ## 13. Gates
 
 | Gate | Status |
