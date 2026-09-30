@@ -79,6 +79,12 @@ export function deletePhoto(relativePath: string): void {
   if (file.exists) file.delete();
 }
 
+/** Dev-only: remove every stored ticket photo. */
+export function deleteAllPhotos(): void {
+  const directory = new Directory(Paths.document, PHOTO_DIR);
+  if (directory.exists) directory.delete();
+}
+
 /** Base64 of the stored photo, or null if the file is gone. */
 export async function readPhotoBase64(relativePath: string): Promise<string | null> {
   const file = photoFile(relativePath);

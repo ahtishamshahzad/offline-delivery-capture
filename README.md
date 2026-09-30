@@ -235,6 +235,8 @@ Deliberately **not** used: TanStack Query (all UI data is local, so SQLite plus 
 
 ## Demo script (≈90 s)
 
+Before recording: ⚙︎ → **Reset demo data**. This clears local deliveries and photos, turns the simulations off and empties the mock server, so the queue starts empty.
+
 1. **0:00** Queue, **● Online** → New Delivery → take a photo of the ticket → "ABC Materials" / "PO-1024" / "20 bags of cement" → Save → Queued → Uploading… → **Synced ✓**.
 2. **0:20** Airplane mode ON → **● Offline** → create "XYZ Supplies" / "PO-2048" → **Queued · Waiting for connection** → swipe-kill → reopen → still there.
 3. **0:45** Airplane mode OFF → **Queued → Uploading… → Synced ✓** with no tap.

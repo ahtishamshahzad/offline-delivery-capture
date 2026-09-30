@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_URL } from '@/config';
 import { deliveryRepository } from '@/repositories/deliveryRepository';
 import { settingsRepository } from '@/repositories/settingsRepository';
-import { fetchServerDeliveryCount, HttpDeliveryApi, type UploadResult } from '@/services/api';
+import {
+  fetchServerDeliveryCount,
+  HttpDeliveryApi,
+  resetServerDeliveries,
+  type UploadResult,
+} from '@/services/api';
+import { deleteAllPhotos } from '@/services/photoService';
 import { DEFAULT_DEV_SETTINGS, type DevSettings } from '@/types/settings';
 import { toUserMessage } from '@/utils/errors';
 
@@ -46,5 +52,24 @@ export function useDevSettings() {
     }
   }, []);
 
-  return { settings, update, resendLastSynced, serverCount, apiUrl: API_URL };
+  /**
+   * Start a demo from scratch: wipe local deliveries + photos, reset dev
+   * toggles, and clear the mock server. Local reset works offline; the
+   * server part is reported separately.
+   */
+  const resetDemo = useCallback(async (): Promise<string> => {
+    const removed = await deliveryRepository.deleteAll();
+    deleteAllPhotos();
+    await settingsRepository.setDevSetting('failureMode', DEFAULT_DEV_SETTINGS.failureMode);
+    await settingsRepository.setDevSetting('uploadDelayMs', DEFAULT_DEV_SETTINGS.uploadDelayMs);
+    let server = 'server cleared';
+    try {
+      await resetServerDeliveries();
+    } catch (error) {
+      server = `server not cleared (${toUserMessage(error)})`;
+    }
+    return `Removed ${removed} local deliveries · ${server}`;
+  }, []);
+
+  return { settings, update, resendLastSynced, serverCount, resetDemo, apiUrl: API_URL };
 }

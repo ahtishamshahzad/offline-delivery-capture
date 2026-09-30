@@ -128,6 +128,13 @@ export class HttpDeliveryApi implements DeliveryApi {
   }
 }
 
+/** Dev screen helper: clear the mock server's store. */
+export async function resetServerDeliveries(baseUrl: string | null = API_URL): Promise<void> {
+  if (!baseUrl) throw new ConfigError('EXPO_PUBLIC_API_URL is not set');
+  const response = await fetch(`${baseUrl}/deliveries`, { method: 'DELETE' });
+  if (!response.ok) throw new ServerError(response.status, 'Could not reset server');
+}
+
 /** Dev screen helper: how many deliveries the mock server has stored. */
 export async function fetchServerDeliveryCount(baseUrl: string | null = API_URL): Promise<number> {
   if (!baseUrl) throw new ConfigError('EXPO_PUBLIC_API_URL is not set');

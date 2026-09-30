@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useDevSettings, type ResendResult } from '@/hooks/useDevSettings';
@@ -45,16 +45,36 @@ function Segmented<T extends string | number>({
 }
 
 export function DevSettingsScreen() {
-  const { settings, update, resendLastSynced, serverCount, apiUrl } = useDevSettings();
+  const { settings, update, resendLastSynced, serverCount, resetDemo, apiUrl } = useDevSettings();
   const [count, setCount] = useState<number | string | null>(null);
   const [resend, setResend] = useState<ResendResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const refreshCount = useCallback(() => {
     serverCount().then(setCount);
   }, [serverCount]);
 
   useEffect(refreshCount, [refreshCount]);
+
+  const onReset = () => {
+    Alert.alert(
+      'Reset demo data?',
+      'Deletes every delivery and photo on this device, turns simulations off, and clears the mock server.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            setResend(null);
+            setResetMessage(await resetDemo());
+            refreshCount();
+          },
+        },
+      ],
+    );
+  };
 
   const onResend = async () => {
     setBusy(true);
@@ -123,6 +143,15 @@ export function DevSettingsScreen() {
             )}
           </View>
         )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.title}>Start a demo from scratch</Text>
+        <Text style={styles.hint}>
+          Clears local deliveries and photos, resets the toggles above and empties the mock server.
+        </Text>
+        <PrimaryButton title="Reset demo data" onPress={onReset} variant="danger" />
+        {resetMessage && <Text style={styles.body}>{resetMessage}</Text>}
       </View>
     </ScrollView>
   );

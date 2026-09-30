@@ -156,6 +156,14 @@ export const deliveryRepository = {
     return result.changes;
   },
 
+  /** Dev-only: wipe every local delivery (used to start a demo from scratch). */
+  async deleteAll(): Promise<number> {
+    const db = await getDb();
+    const result = await db.runAsync('DELETE FROM deliveries');
+    notify();
+    return result.changes;
+  },
+
   async resetForManualRetry(id: string, now: number): Promise<boolean> {
     const db = await getDb();
     const result = await db.runAsync(
