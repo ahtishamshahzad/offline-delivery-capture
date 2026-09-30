@@ -47,7 +47,11 @@
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/mock-server/"
-    ]
+      "/mock-server/",
+      "<rootDir>/.claude/"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }
