@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test": "jest",
-    "test:server": "node --test mock-server/"
+    "test:server": "node --test mock-server/server.test.js"
   },
   "dependencies": {
     "@react-native-community/netinfo": "12.0.1",
