@@ -49,3 +49,6 @@ example
 
 # mock server runtime data
 mock-server/data/
+
+# Claude Code worktrees
+.claude/worktrees/

@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test": "jest",
-    "test:server": "node --test mock-server/"
+    "test:server": "node --test mock-server/server.test.js"
   },
   "dependencies": {
     "@react-native-community/netinfo": "12.0.1",
@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/jest": "29.5.14",
+    "@types/node": "^22.20.4",
     "@types/react": "~19.2.2",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~57.0.2",
@@ -47,7 +48,11 @@
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/mock-server/"
-    ]
+      "/mock-server/",
+      "<rootDir>/.claude/"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }
